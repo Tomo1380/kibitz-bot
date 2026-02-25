@@ -3,6 +3,9 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
+# Install build tools for native modules (sodium-native, @discordjs/opus)
+RUN apk add --no-cache python3 make g++ libsodium-dev opus-dev
+
 # Copy root workspace manifest and lock file
 COPY package.json package-lock.json ./
 

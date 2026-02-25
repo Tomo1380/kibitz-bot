@@ -1,0 +1,11 @@
+node_modules
+packages/*/node_modules
+packages/*/dist
+packages/capture-app/node_modules
+packages/capture-app/dist
+.git
+*.log
+.env
+.env.*
+coverage
+.nyc_output
