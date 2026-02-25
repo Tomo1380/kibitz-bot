@@ -103,9 +103,15 @@ export async function handleCommand(
       }
 
       try {
-        // Join VC if user is in one AND tier is pro
-        if (voiceChannel && voiceChannel.isVoiceBased() && tier === 'pro') {
-          await voiceHandler.joinChannel(voiceChannel);
+        // Join VC if user is in one
+        let voiceJoined = false;
+        if (voiceChannel && voiceChannel.isVoiceBased()) {
+          try {
+            await voiceHandler.joinChannel(voiceChannel);
+            voiceJoined = true;
+          } catch (vcError) {
+            console.error('[Kibitz] Voice join failed (continuing without voice):', vcError instanceof Error ? vcError.message : vcError);
+          }
         }
 
         const session: GameSession = {
@@ -128,25 +134,26 @@ export async function handleCommand(
           CAPTURE_SERVICE_URL,
           AI_SERVICE_URL,
           textChannel,
-          tier === 'pro' ? voiceHandler : undefined
+          tier === 'pro' && voiceJoined ? voiceHandler : undefined
         );
 
-        const voiceStatus =
-          tier === 'pro' && voiceChannel
-            ? ' Joined voice channel!'
-            : tier === 'free'
-              ? ' (Voice is a Pro feature — `/kibitz-upgrade`)'
-              : '';
+        const voiceStatus = voiceJoined
+          ? ' Joined voice channel!'
+          : voiceChannel
+            ? ' (Failed to join voice — running in text-only mode)'
+            : ' (Join a voice channel first for voice reactions!)';
 
         await interaction.reply(
           `Kibitz is now watching your game!${voiceStatus}`
         );
       } catch (error) {
         console.error('[Kibitz] Start error:', error);
-        await interaction.reply({
-          content: 'Failed to start Kibitz. Please try again.',
-          ephemeral: true,
-        });
+        if (!interaction.replied) {
+          await interaction.reply({
+            content: 'Failed to start Kibitz. Please try again.',
+            ephemeral: true,
+          });
+        }
       }
       break;
     }

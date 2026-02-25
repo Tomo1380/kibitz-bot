@@ -22,7 +22,6 @@ const client = new Client({
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildVoiceStates,
     GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent,
   ],
 });
 
@@ -46,12 +45,20 @@ client.on(Events.InteractionCreate, async (interaction) => {
     );
   } catch (error) {
     console.error('[Kibitz] Command error:', error);
-    const reply = interaction.deferred || interaction.replied
-      ? interaction.editReply.bind(interaction)
-      : interaction.reply.bind(interaction);
-    await reply({ content: 'An error occurred while executing the command.' }).catch(
-      console.error
-    );
+    try {
+      if (interaction.replied) {
+        // Already fully replied — do nothing to avoid double-ack
+        return;
+      }
+      if (interaction.deferred) {
+        await interaction.editReply({ content: 'An error occurred while executing the command.' });
+      } else {
+        await interaction.reply({ content: 'An error occurred while executing the command.', ephemeral: true });
+      }
+    } catch (replyError) {
+      // Interaction may have expired or already been acknowledged — silently log
+      console.error('[Kibitz] Failed to send error response:', replyError instanceof Error ? replyError.message : replyError);
+    }
   }
 });
 

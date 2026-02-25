@@ -1,0 +1,56 @@
+appId: gg.kibitz.capture
+productName: Kibitz
+copyright: "Copyright © 2024 Kibitz"
+
+# Source files included in the package
+files:
+  - dist/**/*
+  - assets/**/*
+  - node_modules/**/*
+  - package.json
+
+# Extra resources bundled alongside the app
+extraResources:
+  - from: assets/
+    to: assets/
+    filter:
+      - "**/*"
+
+# The built renderer goes here; main.js references dist/renderer/index.html
+directories:
+  output: release
+  buildResources: assets
+
+# Windows .exe target
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: assets/icon.png
+  requestedExecutionLevel: asInvoker
+
+# NSIS installer settings
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  shortcutName: Kibitz
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+
+# macOS (for developers on Mac)
+mac:
+  target:
+    - target: dmg
+      arch:
+        - x64
+        - arm64
+  icon: assets/icon.png
+  category: public.app-category.games
+
+# Linux (optional)
+linux:
+  target:
+    - AppImage
+  icon: assets/icon.png
+  category: Game

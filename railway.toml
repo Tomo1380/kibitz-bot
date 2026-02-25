@@ -1,0 +1,41 @@
+# Railway deployment configuration
+# Defines two services: bot and ai-service
+# See: https://docs.railway.app/reference/config-as-code
+
+[services.ai-service]
+  [services.ai-service.build]
+    dockerfilePath = "packages/ai-service/Dockerfile"
+    # Build context is repo root so Dockerfile can copy workspace files
+    buildContext = "."
+
+  [services.ai-service.deploy]
+    numReplicas = 1
+    sleepApplication = false
+    restartPolicyType = "ON_FAILURE"
+    restartPolicyMaxRetries = 3
+
+  # healthcheck — Railway will restart if this fails
+  [services.ai-service.deploy.healthcheck]
+    path = "/health"
+    timeoutSeconds = 10
+
+  # Environment variables (set secrets in Railway dashboard)
+  # Required: ANTHROPIC_API_KEY
+  # Optional: PORT (defaults to 3457 in code, Railway injects $PORT automatically)
+
+[services.bot]
+  [services.bot.build]
+    dockerfilePath = "packages/bot/Dockerfile"
+    buildContext = "."
+
+  [services.bot.deploy]
+    numReplicas = 1
+    sleepApplication = false
+    restartPolicyType = "ON_FAILURE"
+    restartPolicyMaxRetries = 3
+
+  # Environment variables (set in Railway dashboard)
+  # Required: DISCORD_TOKEN, DISCORD_CLIENT_ID
+  # Required: AI_SERVICE_URL  (set to the Railway internal URL of ai-service, e.g. https://kibitz-ai.railway.app)
+  # Optional: CAPTURE_SERVICE_URL (URL of user's local capture app — configured per user)
+  # Optional: REACTION_INTERVAL_MS (default 30000)

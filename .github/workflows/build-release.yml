@@ -1,0 +1,80 @@
+name: Build & Release Windows App
+
+on:
+  push:
+    branches: [master]
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: packages/capture-app
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install root dependencies
+        working-directory: .
+        run: npm install
+
+      - name: Install capture-app dependencies
+        run: npm install
+
+      - name: Build Windows installer
+        run: npm run dist:win
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: kibitz-windows-installer
+          path: |
+            packages/capture-app/release/*.exe
+            packages/capture-app/release/latest.yml
+          retention-days: 30
+
+  create-release:
+    needs: build-windows
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download installer artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: kibitz-windows-installer
+          path: ./dist
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ./dist/*.exe
+          name: "Kibitz ${{ github.ref_name }}"
+          body: |
+            ## Kibitz — AI Gaming Co-Pilot
+
+            ### Installation
+            1. Download `Kibitz-Setup-*.exe`
+            2. Run the installer
+            3. Kibitz starts in your system tray
+
+            ### Setup
+            - Invite the bot: https://discord.com/oauth2/authorize?client_id=1476082436663279646&permissions=2150631424&scope=bot+applications.commands
+            - Join a Voice Channel, type `/kibitz-start`
+            - Start gaming — Kibitz watches and reacts!
+          draft: false
+          prerelease: false
