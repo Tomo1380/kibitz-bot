@@ -9,8 +9,11 @@ RUN apk add --no-cache python3 make g++ libsodium-dev opus-dev
 # Copy root workspace manifest and lock file
 COPY package.json package-lock.json ./
 
-# Copy only bot package manifest first (for layer caching)
+# Copy all workspace package manifests (required for npm workspaces resolution)
 COPY packages/bot/package.json ./packages/bot/
+COPY packages/ai-service/package.json ./packages/ai-service/
+COPY packages/capture/package.json ./packages/capture/
+COPY packages/capture-app/package.json ./packages/capture-app/
 
 # Install all workspace dependencies
 RUN npm install --workspace=packages/bot --include-workspace-root

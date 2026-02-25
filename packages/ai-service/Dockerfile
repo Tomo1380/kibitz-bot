@@ -6,8 +6,11 @@ WORKDIR /app
 # Copy root workspace manifest and lock file
 COPY package.json package-lock.json ./
 
-# Copy only ai-service package manifest first (for layer caching)
+# Copy all workspace package manifests (required for npm workspaces resolution)
 COPY packages/ai-service/package.json ./packages/ai-service/
+COPY packages/bot/package.json ./packages/bot/
+COPY packages/capture/package.json ./packages/capture/
+COPY packages/capture-app/package.json ./packages/capture-app/
 
 # Install workspace dependencies
 RUN npm install --workspace=packages/ai-service --include-workspace-root
