@@ -11,7 +11,6 @@ import { AutoReactor } from './reactions/auto-reactor';
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 const CAPTURE_SERVICE_URL =
   process.env.CAPTURE_SERVICE_URL ?? 'http://localhost:3456';
-const AI_SERVICE_URL = process.env.AI_SERVICE_URL ?? 'http://localhost:3457';
 
 if (!DISCORD_TOKEN) {
   console.error('[Kibitz] DISCORD_TOKEN is not set.');
@@ -27,7 +26,7 @@ const client = new Client({
 });
 
 const captureClient = new CaptureClient(CAPTURE_SERVICE_URL);
-const aiClient = new AiClient(AI_SERVICE_URL);
+const aiClient = new AiClient();
 const voiceHandler = new VoiceHandler();
 const autoReactor = new AutoReactor();
 const sessions = new Map<string, GameSession>();
@@ -67,7 +66,7 @@ client.once(Events.ClientReady, (readyClient) => {
   console.log(`[Kibitz] Logged in as ${readyClient.user.tag}`);
   console.log(`[Kibitz] Connected to ${readyClient.guilds.cache.size} servers`);
   console.log(`[Kibitz] Capture Service: ${CAPTURE_SERVICE_URL}`);
-  console.log(`[Kibitz] AI Service: ${AI_SERVICE_URL}`);
+  console.log(`[Kibitz] AI: Claude API (direct)`);
 });
 
 client.on(Events.ShardReconnecting, () => {
