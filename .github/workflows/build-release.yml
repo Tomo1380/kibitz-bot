@@ -2,7 +2,6 @@ name: Build & Release Windows App
 
 on:
   push:
-    branches: [main]
     tags:
       - 'v*'
   workflow_dispatch:
@@ -21,9 +20,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
 
       - name: Install capture-app dependencies
         run: npm install --ignore-scripts
+        env:
+          npm_config_registry: https://registry.npmjs.org/
 
       - name: Build Windows installer
         run: npm run dist:win

@@ -9,8 +9,11 @@ RUN apk add --no-cache python3 make g++ libsodium-dev opus-dev
 COPY package.json ./
 COPY tsconfig.json ./
 
-# Install dependencies (standalone, no workspace)
+# Install all dependencies (including devDeps for build)
 RUN npm install --ignore-scripts
+
+# Build native modules explicitly (sodium-native needs this)
+RUN npm rebuild sodium-native || true
 
 # Copy source
 COPY src/ ./src/
@@ -21,14 +24,15 @@ RUN npx tsc
 # ---- Runtime stage ----
 FROM node:20-alpine AS runtime
 
-RUN apk add --no-cache libsodium-dev ffmpeg
+# Install runtime libs only (no build tools needed — node_modules copied from builder)
+RUN apk add --no-cache libsodium ffmpeg
 
 WORKDIR /app
 
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/package.json ./package.json
-
-RUN npm install --omit=dev
+# Copy node_modules from builder (avoids re-compiling native modules without build tools)
+COPY --from=builder /app/node_modules ./node_modules
 
 ENV NODE_ENV=production
 
