@@ -1,0 +1,25 @@
+{
+  "name": "@discord-game-bot/bot",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "start": "node dist/index.js",
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "register-commands": "tsx src/register-commands.ts"
+  },
+  "dependencies": {
+    "discord.js": "^14.14.0",
+    "@discordjs/voice": "^0.17.0",
+    "@discordjs/opus": "^0.9.0",
+    "openai": "^4.28.0",
+    "axios": "^1.6.0",
+    "dotenv": "^16.4.0",
+    "sodium-native": "^4.1.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "@types/node": "^20.0.0",
+    "tsx": "^4.7.0"
+  }
+}
