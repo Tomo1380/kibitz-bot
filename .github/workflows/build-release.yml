@@ -22,12 +22,8 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install root dependencies
-        working-directory: .
-        run: npm install
-
       - name: Install capture-app dependencies
-        run: npm install
+        run: npm install --ignore-scripts
 
       - name: Build Windows installer
         run: npm run dist:win
