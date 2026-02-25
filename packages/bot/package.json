@@ -1,5 +1,5 @@
 {
-  "name": "@discord-game-bot/bot",
+  "name": "@kibitz/bot",
   "version": "0.1.0",
   "private": true,
   "scripts": {

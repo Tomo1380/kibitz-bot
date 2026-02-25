@@ -15,7 +15,7 @@ const REACTION_INTERVAL_MS = parseInt(
 );
 
 if (!DISCORD_TOKEN) {
-  console.error('[Bot] DISCORD_TOKEN が設定されていません。');
+  console.error('[Kibitz] DISCORD_TOKEN is not set.');
   process.exit(1);
 }
 
@@ -39,11 +39,11 @@ client.on(Events.InteractionCreate, async (interaction) => {
   try {
     await handleCommand(interaction, sessions, captureClient, aiClient);
   } catch (error) {
-    console.error('[Bot] コマンド処理エラー:', error);
+    console.error('[Kibitz] Command error:', error);
     const reply = interaction.deferred || interaction.replied
       ? interaction.editReply.bind(interaction)
       : interaction.reply.bind(interaction);
-    await reply({ content: 'コマンドの実行中にエラーが発生しました。' }).catch(
+    await reply({ content: 'An error occurred while executing the command.' }).catch(
       console.error
     );
   }
@@ -79,7 +79,7 @@ function startMonitoringLoop(): void {
         }
       } catch (error) {
         console.error(
-          `[Bot] モニタリングエラー (guild: ${guildId}):`,
+          `[Kibitz] Monitoring error (guild: ${guildId}):`,
           error
         );
       }
@@ -89,31 +89,29 @@ function startMonitoringLoop(): void {
 
 // --- イベントハンドラ ---
 client.once(Events.ClientReady, (readyClient) => {
-  console.log(`[Bot] ログイン完了: ${readyClient.user.tag}`);
-  console.log(`[Bot] ${readyClient.guilds.cache.size} サーバーに接続中`);
-  console.log(`[Bot] Capture Service: ${CAPTURE_SERVICE_URL}`);
-  console.log(`[Bot] AI Service: ${AI_SERVICE_URL}`);
-  console.log(
-    `[Bot] モニタリング間隔: ${REACTION_INTERVAL_MS}ms`
-  );
+  console.log(`[Kibitz] Logged in as ${readyClient.user.tag}`);
+  console.log(`[Kibitz] Connected to ${readyClient.guilds.cache.size} servers`);
+  console.log(`[Kibitz] Capture Service: ${CAPTURE_SERVICE_URL}`);
+  console.log(`[Kibitz] AI Service: ${AI_SERVICE_URL}`);
+  console.log(`[Kibitz] Monitoring interval: ${REACTION_INTERVAL_MS}ms`);
   startMonitoringLoop();
 });
 
 client.on(Events.ShardReconnecting, () => {
-  console.log('[Bot] 再接続中...');
+  console.log('[Kibitz] Reconnecting...');
 });
 
 client.on(Events.ShardDisconnect, () => {
-  console.log('[Bot] 切断されました');
+  console.log('[Kibitz] Disconnected');
 });
 
 client.on(Events.Error, (error) => {
-  console.error('[Bot] クライアントエラー:', error);
+  console.error('[Kibitz] Client error:', error);
 });
 
 // --- グレースフルシャットダウン ---
 const shutdown = (): void => {
-  console.log('[Bot] シャットダウン中...');
+  console.log('[Kibitz] Shutting down...');
   if (monitoringTimer) {
     clearInterval(monitoringTimer);
     monitoringTimer = null;
@@ -127,6 +125,6 @@ process.on('SIGTERM', shutdown);
 
 // --- Bot起動 ---
 client.login(DISCORD_TOKEN).catch((error) => {
-  console.error('[Bot] ログインに失敗しました:', error);
+  console.error('[Kibitz] Login failed:', error);
   process.exit(1);
 });

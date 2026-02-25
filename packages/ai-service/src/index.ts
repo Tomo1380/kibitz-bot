@@ -7,7 +7,7 @@ const PORT = parseInt(process.env.PORT ?? '3457', 10);
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 
 if (!ANTHROPIC_API_KEY) {
-  console.error('[ai-service] ANTHROPIC_API_KEY が設定されていません。');
+  console.error('[Kibitz AI] ANTHROPIC_API_KEY is not set.');
   process.exit(1);
 }
 
@@ -84,7 +84,7 @@ const start = async (): Promise<void> => {
   try {
     await fastify.listen({ port: PORT, host: '0.0.0.0' });
     console.log(
-      `[ai-service] Fastify サーバーが起動しました: http://0.0.0.0:${PORT}`
+      `[Kibitz AI] Server started: http://0.0.0.0:${PORT}`
     );
   } catch (err) {
     fastify.log.error(err);
@@ -94,7 +94,7 @@ const start = async (): Promise<void> => {
 
 // グレースフルシャットダウン
 const shutdown = async (): Promise<void> => {
-  console.log('[ai-service] シャットダウン中...');
+  console.log('[Kibitz AI] Shutting down...');
   await fastify.close();
   process.exit(0);
 };

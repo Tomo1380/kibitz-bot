@@ -68,7 +68,7 @@ const start = async (): Promise<void> => {
     screenCapture.start();
 
     await fastify.listen({ port: PORT, host: '0.0.0.0' });
-    console.log(`[capture-service] Fastify サーバーが起動しました: http://0.0.0.0:${PORT}`);
+    console.log(`[Kibitz Capture] Server started: http://0.0.0.0:${PORT}`);
   } catch (err) {
     fastify.log.error(err);
     process.exit(1);
@@ -77,7 +77,7 @@ const start = async (): Promise<void> => {
 
 // グレースフルシャットダウン
 const shutdown = async (): Promise<void> => {
-  console.log('[capture-service] シャットダウン中...');
+  console.log('[Kibitz Capture] Shutting down...');
   gameDetector.stop();
   screenCapture.stop();
   await fastify.close();

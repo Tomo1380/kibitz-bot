@@ -109,7 +109,7 @@ export async function handleCommand(
         });
 
         connection.on(VoiceConnectionStatus.Ready, () => {
-          console.log(`[Bot] VCに接続しました: ${voiceChannel.name}`);
+          console.log(`[Kibitz] Joined VC: ${voiceChannel.name}`);
         });
 
         const session: GameSession = {
@@ -126,7 +126,7 @@ export async function handleCommand(
 
         await interaction.reply('ゲームコンパニオンが参加しました！');
       } catch (error) {
-        console.error('[Bot] VC接続エラー:', error);
+        console.error('[Kibitz] VC connection error:', error);
         await interaction.reply({
           content: 'VCへの接続に失敗しました。',
           ephemeral: true,
