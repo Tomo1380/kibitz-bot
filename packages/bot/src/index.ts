@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import http from 'http';
 import { Client, Events, GatewayIntentBits } from 'discord.js';
 import { GameSession } from './types';
 import { handleCommand, commands } from './commands';
@@ -89,6 +90,15 @@ const shutdown = (): void => {
 
 process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);
+
+// Health check HTTP server (Railway requires a port to be open)
+const PORT = parseInt(process.env.PORT ?? '3458', 10);
+http.createServer((req, res) => {
+  res.writeHead(200, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify({ status: 'ok', bot: client.user?.tag ?? 'starting' }));
+}).listen(PORT, () => {
+  console.log(`[Kibitz] Health check server listening on port ${PORT}`);
+});
 
 client.login(DISCORD_TOKEN).catch((error) => {
   console.error('[Kibitz] Login failed:', error);
