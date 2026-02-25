@@ -1,121 +1,117 @@
 import {
   SlashCommandBuilder,
   ChatInputCommandInteraction,
-  Client,
   GuildMember,
   TextChannel,
 } from 'discord.js';
-import {
-  joinVoiceChannel,
-  getVoiceConnection,
-  VoiceConnectionStatus,
-} from '@discordjs/voice';
+import { getVoiceConnection } from '@discordjs/voice';
 import { GameSession } from '../types';
 import { CaptureClient } from '../services/capture-client';
 import { AiClient } from '../services/ai-client';
+import { VoiceHandler } from '../voice/voice-handler';
+import { AutoReactor } from '../reactions/auto-reactor';
+import { TierManager } from '../tiers/tier-manager';
+
+const CAPTURE_SERVICE_URL =
+  process.env.CAPTURE_SERVICE_URL ?? 'http://localhost:3456';
+const AI_SERVICE_URL = process.env.AI_SERVICE_URL ?? 'http://localhost:3457';
 
 const PERSONA_TYPES = ['fps', 'rpg', 'moba', 'survival', 'action', 'other'];
 
 export const commands = [
   new SlashCommandBuilder()
-    .setName('join')
-    .setDescription('VCに参加してゲームモニタリングを開始します'),
+    .setName('kibitz-start')
+    .setDescription('Start Kibitz — AI watches your game and reacts'),
 
   new SlashCommandBuilder()
-    .setName('leave')
-    .setDescription('VCから退出します'),
+    .setName('kibitz-stop')
+    .setDescription('Stop Kibitz and leave voice channel'),
 
   new SlashCommandBuilder()
-    .setName('hint')
-    .setDescription('今の画面についてヒントを教えます'),
+    .setName('kibitz-hint')
+    .setDescription('Get a quick hint about your current screen'),
 
   new SlashCommandBuilder()
-    .setName('analyze')
-    .setDescription('画面の詳細解析を実行します'),
+    .setName('kibitz-analyze')
+    .setDescription('Get a detailed analysis of your current screen'),
 
   new SlashCommandBuilder()
-    .setName('mode')
-    .setDescription('ゲームを手動で指定します')
+    .setName('kibitz-mode')
+    .setDescription('Manually set the game name')
     .addStringOption((option) =>
       option
         .setName('game_name')
-        .setDescription('ゲーム名')
+        .setDescription('Game name')
         .setRequired(true)
     ),
 
   new SlashCommandBuilder()
-    .setName('persona')
-    .setDescription('AIキャラクターのジャンルを変更します')
+    .setName('kibitz-persona')
+    .setDescription('Change AI persona genre')
     .addStringOption((option) =>
       option
         .setName('type')
-        .setDescription('キャラクタータイプ')
+        .setDescription('Persona type')
         .setRequired(true)
         .addChoices(
           { name: 'FPS', value: 'fps' },
           { name: 'RPG', value: 'rpg' },
           { name: 'MOBA', value: 'moba' },
-          { name: 'サバイバル', value: 'survival' },
-          { name: 'アクション', value: 'action' },
-          { name: 'その他', value: 'other' }
+          { name: 'Survival', value: 'survival' },
+          { name: 'Action', value: 'action' },
+          { name: 'Other', value: 'other' }
         )
     ),
+
+  new SlashCommandBuilder()
+    .setName('kibitz-upgrade')
+    .setDescription('Learn how to upgrade to Kibitz Pro'),
 ];
 
 export async function handleCommand(
   interaction: ChatInputCommandInteraction,
   sessions: Map<string, GameSession>,
   captureClient: CaptureClient,
-  aiClient: AiClient
+  aiClient: AiClient,
+  voiceHandler: VoiceHandler,
+  autoReactor: AutoReactor
 ): Promise<void> {
   const { commandName, guildId } = interaction;
+  const tierManager = TierManager.getInstance();
 
   if (!guildId) {
     await interaction.reply({
-      content: 'このコマンドはサーバー内でのみ使用できます。',
+      content: 'This command can only be used in a server.',
       ephemeral: true,
     });
     return;
   }
 
   switch (commandName) {
-    case 'join': {
+    case 'kibitz-start': {
       const member = interaction.member as GuildMember | null;
       const voiceChannel = member?.voice?.channel;
+      const tier = tierManager.isProGuild(guildId) ? 'pro' : 'free';
 
-      if (!voiceChannel) {
+      if (!tierManager.checkAndConsume(guildId, tier)) {
         await interaction.reply({
-          content: 'まずVCに参加してからコマンドを実行してください。',
-          ephemeral: true,
-        });
-        return;
-      }
-
-      if (!voiceChannel.isVoiceBased()) {
-        await interaction.reply({
-          content: '音声チャンネルに参加してください。',
+          content:
+            "You've hit the free tier limit (15 reactions/day). Use `/kibitz-upgrade` to go Pro!",
           ephemeral: true,
         });
         return;
       }
 
       try {
-        const connection = joinVoiceChannel({
-          channelId: voiceChannel.id,
-          guildId,
-          adapterCreator: voiceChannel.guild.voiceAdapterCreator,
-          selfDeaf: true,
-          selfMute: true,
-        });
-
-        connection.on(VoiceConnectionStatus.Ready, () => {
-          console.log(`[Kibitz] Joined VC: ${voiceChannel.name}`);
-        });
+        // Join VC if user is in one AND tier is pro
+        if (voiceChannel && voiceChannel.isVoiceBased() && tier === 'pro') {
+          await voiceHandler.joinChannel(voiceChannel);
+        }
 
         const session: GameSession = {
           guildId,
           channelId: interaction.channelId,
-          voiceChannelId: voiceChannel.id,
+          voiceChannelId: voiceChannel?.id ?? '',
           gameName: null,
           genre: null,
           isMonitoring: true,
@@ -124,41 +120,58 @@ export async function handleCommand(
 
         sessions.set(guildId, session);
 
-        await interaction.reply('ゲームコンパニオンが参加しました！');
+        const textChannel = interaction.channel as TextChannel;
+
+        // Start auto reactor
+        autoReactor.start(
+          guildId,
+          CAPTURE_SERVICE_URL,
+          AI_SERVICE_URL,
+          textChannel,
+          tier === 'pro' ? voiceHandler : undefined
+        );
+
+        const voiceStatus =
+          tier === 'pro' && voiceChannel
+            ? ' Joined voice channel!'
+            : tier === 'free'
+              ? ' (Voice is a Pro feature — `/kibitz-upgrade`)'
+              : '';
+
+        await interaction.reply(
+          `Kibitz is now watching your game!${voiceStatus}`
+        );
       } catch (error) {
-        console.error('[Kibitz] VC connection error:', error);
+        console.error('[Kibitz] Start error:', error);
         await interaction.reply({
-          content: 'VCへの接続に失敗しました。',
+          content: 'Failed to start Kibitz. Please try again.',
           ephemeral: true,
         });
       }
       break;
     }
 
-    case 'leave': {
-      const connection = getVoiceConnection(guildId);
+    case 'kibitz-stop': {
+      autoReactor.stop(guildId);
+      voiceHandler.leaveChannel(guildId);
 
-      if (!connection) {
-        await interaction.reply({
-          content: '現在VCに参加していません。',
-          ephemeral: true,
-        });
-        return;
+      const connection = getVoiceConnection(guildId);
+      if (connection) {
+        connection.destroy();
       }
 
-      connection.destroy();
       sessions.delete(guildId);
 
-      await interaction.reply('またね！');
+      await interaction.reply('Kibitz stopped. See you next game!');
       break;
     }
 
-    case 'hint': {
+    case 'kibitz-hint': {
       const session = sessions.get(guildId);
 
       if (!session) {
         await interaction.reply({
-          content: 'まず /join でVCに参加してください。',
+          content: 'Start Kibitz first with `/kibitz-start`.',
           ephemeral: true,
         });
         return;
@@ -170,14 +183,14 @@ export async function handleCommand(
 
       if (!screenshot) {
         await interaction.editReply(
-          'スクリーンショットの取得に失敗しました。capture-serviceが起動しているか確認してください。'
+          'Failed to get screenshot. Is the capture service running?'
         );
         return;
       }
 
       const answer = await aiClient.analyze(
         screenshot.image,
-        '今の画面でアドバイスして',
+        'Give me a quick hint about what I see on screen.',
         session.gameName ?? undefined,
         session.genre ?? undefined
       );
@@ -186,12 +199,12 @@ export async function handleCommand(
       break;
     }
 
-    case 'analyze': {
+    case 'kibitz-analyze': {
       const session = sessions.get(guildId);
 
       if (!session) {
         await interaction.reply({
-          content: 'まず /join でVCに参加してください。',
+          content: 'Start Kibitz first with `/kibitz-start`.',
           ephemeral: true,
         });
         return;
@@ -203,14 +216,14 @@ export async function handleCommand(
 
       if (!screenshot) {
         await interaction.editReply(
-          'スクリーンショットの取得に失敗しました。capture-serviceが起動しているか確認してください。'
+          'Failed to get screenshot. Is the capture service running?'
         );
         return;
       }
 
       const answer = await aiClient.analyze(
         screenshot.image,
-        '現在の画面を詳細に解析してください。状況説明、敵の位置や体力、アイテム・リソース状況、推奨アクション、注意すべき点を詳しく教えてください。',
+        'Analyze the current screen in detail. Describe the situation, enemy positions, health, items/resources, recommended actions, and things to watch out for.',
         session.gameName ?? undefined,
         session.genre ?? undefined
       );
@@ -219,7 +232,7 @@ export async function handleCommand(
       break;
     }
 
-    case 'mode': {
+    case 'kibitz-mode': {
       const gameName = interaction.options.getString('game_name', true);
 
       const session = sessions.get(guildId);
@@ -227,7 +240,6 @@ export async function handleCommand(
         session.gameName = gameName;
         sessions.set(guildId, session);
       } else {
-        // セッションがなくてもモード設定は受け付ける
         const newSession: GameSession = {
           guildId,
           channelId: interaction.channelId,
@@ -240,16 +252,16 @@ export async function handleCommand(
         sessions.set(guildId, newSession);
       }
 
-      await interaction.reply(`ゲームを${gameName}に設定しました。`);
+      await interaction.reply(`Game set to **${gameName}**.`);
       break;
     }
 
-    case 'persona': {
+    case 'kibitz-persona': {
       const personaType = interaction.options.getString('type', true);
 
       if (!PERSONA_TYPES.includes(personaType)) {
         await interaction.reply({
-          content: `無効なキャラクタータイプです。使用可能: ${PERSONA_TYPES.join(', ')}`,
+          content: `Invalid persona type. Available: ${PERSONA_TYPES.join(', ')}`,
           ephemeral: true,
         });
         return;
@@ -272,13 +284,34 @@ export async function handleCommand(
         sessions.set(guildId, newSession);
       }
 
-      await interaction.reply(`キャラクターを${personaType}に変更しました。`);
+      await interaction.reply(`Persona changed to **${personaType}**.`);
+      break;
+    }
+
+    case 'kibitz-upgrade': {
+      const remaining = tierManager.getRemainingReactions(guildId);
+      await interaction.reply({
+        content: [
+          '**Kibitz Pro** — $4.99/mo',
+          '',
+          'Upgrade to unlock:',
+          '- Unlimited AI reactions (free: 15/day)',
+          '- Voice channel output (Kibitz speaks!)',
+          '- Advanced game analysis',
+          '- Priority support',
+          '',
+          `You have **${remaining}** free reactions remaining today.`,
+          '',
+          'To upgrade, visit: https://kibitz.gg/pro',
+        ].join('\n'),
+        ephemeral: true,
+      });
       break;
     }
 
     default:
       await interaction.reply({
-        content: '未知のコマンドです。',
+        content: 'Unknown command.',
         ephemeral: true,
       });
   }
