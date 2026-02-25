@@ -1,0 +1,20 @@
+{
+  "name": "discord-game-bot",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "start:capture": "npm -w packages/capture run start",
+    "start:ai": "npm -w packages/ai-service run start",
+    "start:bot": "npm -w packages/bot run start",
+    "dev:capture": "npm -w packages/capture run dev",
+    "dev:ai": "npm -w packages/ai-service run dev",
+    "dev:bot": "npm -w packages/bot run dev"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "@types/node": "^20.0.0"
+  }
+}
