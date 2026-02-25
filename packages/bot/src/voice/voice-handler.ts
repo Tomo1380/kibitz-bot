@@ -1,12 +1,12 @@
 import {
   joinVoiceChannel,
-  getVoiceConnection,
   createAudioPlayer,
   createAudioResource,
   AudioPlayerStatus,
   VoiceConnection,
   VoiceConnectionStatus,
   entersState,
+  DiscordGatewayAdapterCreator,
 } from '@discordjs/voice';
 import { VoiceBasedChannel } from 'discord.js';
 import { Readable } from 'stream';
@@ -27,7 +27,7 @@ export class VoiceHandler {
     const connection = joinVoiceChannel({
       channelId: channel.id,
       guildId: channel.guild.id,
-      adapterCreator: channel.guild.voiceAdapterCreator,
+      adapterCreator: channel.guild.voiceAdapterCreator as unknown as DiscordGatewayAdapterCreator,
       selfDeaf: true,
       selfMute: false,
     });
